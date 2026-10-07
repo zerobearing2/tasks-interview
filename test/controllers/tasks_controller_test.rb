@@ -17,6 +17,27 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: tasks(:renew_passport).title
   end
 
+  test "index shows each task's assignee" do
+    log_in_as users(:ada)
+
+    get tasks_path
+
+    assert_select "div", text: users(:grace).name
+    assert_select "div", text: "Unassigned"
+  end
+
+  test "index does not run a query per task" do
+    log_in_as users(:ada)
+    baseline = count_queries { get tasks_path }
+
+    4.times do |number|
+      assignee = User.create!(name: "Assignee #{number}", email: "assignee#{number}@tern.travel", password: "abc123")
+      Task.create!(title: "Task #{number}", assignee:)
+    end
+
+    assert_equal baseline, count_queries { get tasks_path }
+  end
+
   test "index offers to mark each task as the opposite of its current state" do
     log_in_as users(:ada)
 
@@ -94,6 +115,80 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: tasks(:renew_passport).title
   end
 
+  test "create assigns the task" do
+    log_in_as users(:ada)
+
+    assert_difference -> { Task.where(assignee: users(:grace)).count }, 1 do
+      post tasks_path, params: {task: {title: "Book hotel in Kyoto", assignee_id: users(:grace).id}}
+    end
+
+    assert_redirected_to tasks_path
+  end
+
+  test "create with a nonexistent assignee re-renders the index with the error" do
+    log_in_as users(:ada)
+
+    assert_no_difference -> { Task.count } do
+      post tasks_path, params: {task: {title: "Book hotel in Kyoto", assignee_id: nonexistent_user_id}}
+    end
+
+    assert_response :unprocessable_content
+    assert_select "li", text: "Assignee must exist"
+    assert_select "input[name='task[title]'][value='Book hotel in Kyoto']"
+  end
+
+  test "create with a non-numeric assignee is rejected" do
+    log_in_as users(:ada)
+
+    assert_no_difference -> { Task.count } do
+      post tasks_path, params: {task: {title: "Book hotel in Kyoto", assignee_id: "abc"}}
+    end
+
+    assert_response :unprocessable_content
+    assert_select "li", text: "Assignee must exist"
+  end
+
+  test "edit offers every user and preselects the current assignee" do
+    log_in_as users(:ada)
+
+    get edit_task_path(tasks(:book_flights))
+
+    assert_select "label[for='task_assignee_id']", text: "Assignee"
+    assert_select "select[name='task[assignee_id]']" do
+      assert_select "option[value='']", text: "Unassigned"
+      assert_select "option[value='#{users(:ada).id}']", text: users(:ada).name
+      assert_select "option[selected][value='#{users(:grace).id}']", text: users(:grace).name
+    end
+  end
+
+  test "update assigns the task" do
+    log_in_as users(:ada)
+
+    patch task_path(tasks(:renew_passport)), params: {task: {assignee_id: users(:ada).id}}
+
+    assert_redirected_to tasks_path
+    assert_equal users(:ada), tasks(:renew_passport).reload.assignee
+  end
+
+  test "update with a blank assignee un-assigns the task" do
+    log_in_as users(:ada)
+
+    patch task_path(tasks(:book_flights)), params: {task: {assignee_id: ""}}
+
+    assert_redirected_to tasks_path
+    assert_nil tasks(:book_flights).reload.assignee
+  end
+
+  test "update with a nonexistent assignee re-renders the edit form with the error" do
+    log_in_as users(:ada)
+
+    patch task_path(tasks(:book_flights)), params: {task: {assignee_id: nonexistent_user_id}}
+
+    assert_response :unprocessable_content
+    assert_select "li", text: "Assignee must exist"
+    assert_equal users(:grace), tasks(:book_flights).reload.assignee
+  end
+
   test "update saves the changes and redirects to the index" do
     log_in_as users(:ada)
     task = tasks(:renew_passport)
@@ -146,6 +241,17 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def nonexistent_user_id
+    User.maximum(:id) + 1
+  end
+
+  def count_queries(&block)
+    count = 0
+    counter = ->(*, payload) { count += 1 unless payload[:name].in?(%w[SCHEMA TRANSACTION]) }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record", &block)
+    count
+  end
 
   def assert_toggle_button(task, label:, complete:)
     assert_select "form[action=?]", task_path(task) do
