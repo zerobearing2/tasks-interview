@@ -54,3 +54,25 @@ legacy_tasks = [
 legacy_tasks.each do |attributes|
   Task.where(title: attributes[:title]).first_or_create!(attributes.except(:title))
 end
+
+# One task per edge of the "Due Soon" window and the day-before reminder. Dates
+# are relative to today and upserted, so re-running db:seed refreshes them and
+# clears the sent-reminder stamp.
+today = Date.current
+user1 = User.find_by!(email: "user1@tern.travel")
+user2 = User.find_by!(email: "user2@tern.travel")
+
+due_date_tasks = [
+  {title: "Due dates: overdue since yesterday", due_on: today - 1, assignee: user1, complete: false},
+  {title: "Due dates: due today", due_on: today, assignee: user1, complete: false},
+  {title: "Due dates: due tomorrow", due_on: today + 1, assignee: user1, complete: false},
+  {title: "Due dates: due in 7 days", due_on: today + 7, assignee: user1, complete: false},
+  {title: "Due dates: due in 8 days", due_on: today + 8, assignee: user1, complete: false},
+  {title: "Due dates: completed, due tomorrow", due_on: today + 1, assignee: user1, complete: true},
+  {title: "Due dates: unassigned, due tomorrow", due_on: today + 1, assignee: nil, complete: false},
+  {title: "Due dates: assigned to user2, due in 2 days", due_on: today + 2, assignee: user2, complete: false}
+]
+
+due_date_tasks.each do |attributes|
+  Task.find_or_initialize_by(title: attributes[:title]).update!(reminded_for: nil, **attributes.except(:title))
+end

@@ -213,6 +213,114 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Current one expires in under six months.", task.description
   end
 
+  test "index shows a task's due date and leaves it blank when there is none" do
+    log_in_as users(:ada)
+    tasks(:renew_passport).update!(due_on: Date.new(2026, 5, 3))
+
+    get tasks_path
+
+    assert_select "div", text: "May 03, 2026", count: 1
+    assert_select "div", text: /\A\w+ \d{2}, \d{4}\z/, count: 1
+  end
+
+  test "index lists the current user's due-soon tasks above the main list" do
+    travel_to Time.utc(2026, 5, 3, 12) do
+      log_in_as users(:ada)
+      Task.create!(title: "Due later this week", due_on: Date.new(2026, 5, 6), assignee: users(:ada))
+      Task.create!(title: "Due today", due_on: Date.new(2026, 5, 3), assignee: users(:ada))
+      Task.create!(title: "Due far off", due_on: Date.new(2026, 5, 11), assignee: users(:ada))
+      Task.create!(title: "Someone else's", due_on: Date.new(2026, 5, 4), assignee: users(:grace))
+      Task.create!(title: "Nobody's", due_on: Date.new(2026, 5, 4))
+
+      get tasks_path
+
+      assert_equal ["Due Soon", "Due today", "Due later this week"], css_select("#due_soon h2").map(&:text)
+      assert_select "#due_soon div", text: "May 03, 2026"
+      assert_select "h2", text: "Due today", count: 2
+      assert_select "h2", text: "Someone else's", count: 1
+      assert_operator response.body.index("Due Soon"), :<, response.body.index(tasks(:book_flights).title)
+    end
+  end
+
+  test "index has no due-soon section when the current user has nothing due soon" do
+    travel_to Time.utc(2026, 5, 3, 12) do
+      log_in_as users(:ada)
+      Task.create!(title: "Someone else's", due_on: Date.new(2026, 5, 4), assignee: users(:grace))
+
+      get tasks_path
+
+      assert_select "#due_soon", count: 0
+      assert_select "body", text: /Due Soon/, count: 0
+    end
+  end
+
+  test "create with a blank title still shows the due-soon section" do
+    travel_to Time.utc(2026, 5, 3, 12) do
+      log_in_as users(:ada)
+      Task.create!(title: "Due today", due_on: Date.new(2026, 5, 3), assignee: users(:ada))
+
+      post tasks_path, params: {task: {title: ""}}
+
+      assert_response :unprocessable_content
+      assert_select "#due_soon h2", text: "Due today"
+    end
+  end
+
+  test "the form offers a due date field" do
+    log_in_as users(:ada)
+    tasks(:renew_passport).update!(due_on: Date.new(2026, 5, 3))
+
+    get edit_task_path(tasks(:renew_passport))
+
+    assert_select "label[for='task_due_on']", text: "Due on"
+    assert_select "input[type=date][name='task[due_on]'][value='2026-05-03']"
+  end
+
+  test "create saves the due date" do
+    log_in_as users(:ada)
+
+    post tasks_path, params: {task: {title: "Book hotel in Kyoto", due_on: "2026-05-03"}}
+
+    assert_redirected_to tasks_path
+    assert_equal Date.new(2026, 5, 3), Task.find_by!(title: "Book hotel in Kyoto").due_on
+  end
+
+  test "create with a blank due date saves the task without one" do
+    log_in_as users(:ada)
+
+    post tasks_path, params: {task: {title: "Book hotel in Kyoto", due_on: ""}}
+
+    assert_redirected_to tasks_path
+    assert_nil Task.find_by!(title: "Book hotel in Kyoto").due_on
+  end
+
+  test "create ignores reminded_for" do
+    log_in_as users(:ada)
+
+    post tasks_path, params: {task: {title: "Book hotel in Kyoto", reminded_for: "2026-05-03"}}
+
+    assert_nil Task.find_by!(title: "Book hotel in Kyoto").reminded_for
+  end
+
+  test "update saves the due date" do
+    log_in_as users(:ada)
+
+    patch task_path(tasks(:renew_passport)), params: {task: {due_on: "2026-05-03"}}
+
+    assert_redirected_to tasks_path
+    assert_equal Date.new(2026, 5, 3), tasks(:renew_passport).reload.due_on
+  end
+
+  test "update with a blank due date clears it" do
+    log_in_as users(:ada)
+    tasks(:renew_passport).update!(due_on: Date.new(2026, 5, 3))
+
+    patch task_path(tasks(:renew_passport)), params: {task: {due_on: ""}}
+
+    assert_redirected_to tasks_path
+    assert_nil tasks(:renew_passport).reload.due_on
+  end
+
   test "destroy deletes the task and redirects to the index" do
     log_in_as users(:ada)
 
