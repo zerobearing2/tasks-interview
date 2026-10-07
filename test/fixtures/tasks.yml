@@ -1,11 +1,9 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+book_flights:
+  title: Book flights to Lisbon
+  description: Outbound May 3, return May 17.
+  complete: true
 
-one:
-  title: MyString
-  description: MyText
-  complete: false
-
-two:
-  title: MyString
-  description: MyText
+renew_passport:
+  title: Renew passport
+  description: Current one expires in under six months.
   complete: false

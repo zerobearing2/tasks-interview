@@ -4,7 +4,7 @@ class TasksTest < ApplicationSystemTestCase
   test "visiting the index" do
     visit new_session_url
 
-    fill_in "Email", with: users(:one).email
+    fill_in "Email", with: users(:ada).email
     fill_in "Password", with: "abc123"
 
     click_on "Login"
