@@ -41,7 +41,6 @@ Rails.application.configure do
 
   config.action_mailer.perform_caching = false
 
-  # Written to tmp/mails instead of sent.
   config.action_mailer.delivery_method = :file
   config.action_mailer.default_url_options = {host: "localhost", port: 3000}
 

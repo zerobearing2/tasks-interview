@@ -57,9 +57,15 @@ bin/dev
 `bin/rails reminders:send` emails the assignee of each incomplete task that is
 due tomorrow. It sends one reminder per task and due date, so it is safe to
 rerun. Schedule it hourly so that a task created late in the day still gets its
-reminder.
+reminder. Run one at a time: two overlapping runs can send the same reminder
+twice.
 
-In production, set `APP_HOST` to the host that the links in the email point to.
+A failed send is logged and retried on the next run, and the command exits
+non-zero when any send failed.
+
+In production, set `APP_HOST` to the host that the links in the email point to
+(links use `https`), configure `config.action_mailer.smtp_settings`, and replace
+the placeholder sender in `ApplicationMailer`.
 In development, mail is written to `tmp/mails` instead of being sent, and you
 can preview it at `/rails/mailers`.
 

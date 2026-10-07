@@ -65,7 +65,7 @@ Rails.application.configure do
   config.action_mailer.perform_caching = false
 
   # Read without fetch so commands that send no mail still boot when APP_HOST is unset.
-  config.action_mailer.default_url_options = {host: ENV["APP_HOST"]}
+  config.action_mailer.default_url_options = {host: ENV["APP_HOST"], protocol: "https"}
 
   # Ignore bad email addresses and do not raise email delivery errors.
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.

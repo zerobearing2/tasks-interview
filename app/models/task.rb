@@ -8,7 +8,7 @@ class Task < ApplicationRecord
   scope :due_for_reminder, -> {
     where(complete: false, due_on: Date.current + 1)
       .joins(:assignee)
-      .where.not(users: {email: [nil, ""]})
+      .where("TRIM(users.email) <> ''")
       .where("tasks.reminded_for IS DISTINCT FROM tasks.due_on")
   }
 end

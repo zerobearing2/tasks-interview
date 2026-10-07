@@ -18,14 +18,29 @@ class Task::RemindersTest < ActiveSupport::TestCase
   test "skips tasks that are completed, unassigned, or assigned to someone without an email" do
     no_email = User.create!(name: "No Email", email: nil, password: "abc123")
     empty_email = User.create!(name: "Empty Email", email: "", password: "abc123")
+    blank_email = User.create!(name: "Blank Email", email: " ", password: "abc123")
     Task.create!(title: "Completed", due_on: tomorrow, assignee: users(:ada), complete: true)
     Task.create!(title: "Unassigned", due_on: tomorrow)
     Task.create!(title: "No email", due_on: tomorrow, assignee: no_email)
     Task.create!(title: "Empty email", due_on: tomorrow, assignee: empty_email)
+    Task.create!(title: "Blank email", due_on: tomorrow, assignee: blank_email)
 
     assert_no_emails { Task::Reminders.deliver }
 
     assert_empty Task.where.not(reminded_for: nil)
+  end
+
+  test "logs the task and the error when a send fails" do
+    task = Task.create!(title: "Fails to send", due_on: tomorrow, assignee: users(:ada))
+    log = StringIO.new
+
+    Rails.stub(:logger, ActiveSupport::Logger.new(log)) do
+      ActionMailer::Base.stub(:deliver_mail, ->(_mail) { raise "SMTP is down" }) do
+        assert_raises(Task::Reminders::Error) { Task::Reminders.deliver }
+      end
+    end
+
+    assert_includes log.string, "Reminder for task #{task.id} failed: RuntimeError: SMTP is down"
   end
 
   test "skips tasks due today or in two days" do
@@ -67,10 +82,16 @@ class Task::RemindersTest < ActiveSupport::TestCase
   test "keeps going after a send fails and leaves the failed task to retry" do
     failing = Task.create!(title: "Fails to send", due_on: tomorrow, assignee: users(:ada))
     sending = Task.create!(title: "Sends", due_on: tomorrow, assignee: users(:grace))
-    fail_for_ada = ->(mail) { raise "SMTP is down" if mail.to == ["ada@tern.travel"] }
+    fail_for_ada = ->(mail, &deliver) do
+      raise "SMTP is down" if mail.to == ["ada@tern.travel"]
+      deliver.call
+    end
 
-    ActionMailer::Base.stub(:deliver_mail, fail_for_ada) do
-      Task::Reminders.deliver
+    assert_emails(1) do
+      error = assert_raises(Task::Reminders::Error) do
+        ActionMailer::Base.stub(:deliver_mail, fail_for_ada) { Task::Reminders.deliver }
+      end
+      assert_equal "1 reminder failed to send", error.message
     end
 
     assert_nil failing.reload.reminded_for
