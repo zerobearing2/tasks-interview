@@ -5,6 +5,10 @@ class TaskTest < ActiveSupport::TestCase
     assert Task.new(title: "Book hotel in Kyoto").valid?
   end
 
+  test "incomplete by default" do
+    assert_equal false, Task.create!(title: "Book hotel in Kyoto").complete
+  end
+
   test "invalid without a title" do
     task = Task.new(title: nil)
 

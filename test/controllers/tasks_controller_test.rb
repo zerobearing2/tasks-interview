@@ -17,6 +17,36 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: tasks(:renew_passport).title
   end
 
+  test "index offers to mark each task as the opposite of its current state" do
+    log_in_as users(:ada)
+
+    get tasks_path
+
+    assert_toggle_button tasks(:book_flights), label: "Mark incomplete", complete: "false"
+    assert_toggle_button tasks(:renew_passport), label: "Mark complete", complete: "true"
+  end
+
+  test "update with only complete marks an incomplete task complete" do
+    log_in_as users(:ada)
+    task = tasks(:renew_passport)
+
+    patch task_path(task), params: {task: {complete: "true"}}
+
+    assert_redirected_to tasks_path
+    assert task.reload.complete?
+    assert_equal "Renew passport", task.title
+  end
+
+  test "update with only complete marks a complete task incomplete" do
+    log_in_as users(:ada)
+    task = tasks(:book_flights)
+
+    patch task_path(task), params: {task: {complete: "false"}}
+
+    assert_redirected_to tasks_path
+    assert_not task.reload.complete?
+  end
+
   test "create saves the task and redirects to the index" do
     log_in_as users(:ada)
 
@@ -91,5 +121,15 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to tasks_path
     follow_redirect!
     assert_select "[role=alert]", text: "Task could not be deleted."
+  end
+
+  private
+
+  def assert_toggle_button(task, label:, complete:)
+    assert_select "form[action=?]", task_path(task) do
+      assert_select "input[name=_method][value=patch]"
+      assert_select "input[name=?][value=?]", "task[complete]", complete
+      assert_select "button", text: label
+    end
   end
 end
