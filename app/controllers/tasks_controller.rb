@@ -36,7 +36,7 @@ class TasksController < ApplicationController
     if @task.destroy
       redirect_to tasks_path
     else
-      # TODO: handle
+      redirect_to tasks_path, alert: "Task could not be deleted."
     end
   end
 

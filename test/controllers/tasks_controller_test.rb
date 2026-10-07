@@ -65,4 +65,31 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renew passport", task.title
     assert_equal "Current one expires in under six months.", task.description
   end
+
+  test "destroy deletes the task and redirects to the index" do
+    log_in_as users(:ada)
+
+    assert_difference -> { Task.count }, -1 do
+      delete task_path(tasks(:renew_passport))
+    end
+
+    assert_redirected_to tasks_path
+  end
+
+  test "destroy that fails keeps the task and shows an alert" do
+    log_in_as users(:ada)
+    task = tasks(:renew_passport)
+
+    assert_no_difference -> { Task.count } do
+      task.stub(:destroy, false) do
+        Task.stub(:find, task) do
+          delete task_path(task)
+        end
+      end
+    end
+
+    assert_redirected_to tasks_path
+    follow_redirect!
+    assert_select "[role=alert]", text: "Task could not be deleted."
+  end
 end

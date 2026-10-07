@@ -18,6 +18,10 @@
         </div>
       <%- end %>
 
+      <%- if alert %>
+        <p role="alert" class="mb-4 p-2 border border-red-300 rounded bg-red-50 text-red-700"><%= alert %></p>
+      <%- end %>
+
       <%= yield %>
     </main>
   </body>
