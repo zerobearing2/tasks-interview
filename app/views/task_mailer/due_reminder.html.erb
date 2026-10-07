@@ -1,0 +1,9 @@
+<h1><%= @task.title %></h1>
+
+<p>Due <%= l(@task.due_on, format: :long) %></p>
+
+<%- if @task.description.present? %>
+  <p><%= @task.description %></p>
+<%- end %>
+
+<p><%= link_to "Open task", edit_task_url(@task) %></p>
