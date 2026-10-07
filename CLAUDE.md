@@ -12,7 +12,7 @@ for it, not preemptively.
 - Ruby 4.0.5, Rails 8.1, PostgreSQL 18
 - Hotwire (Turbo + Stimulus) with import maps; Propshaft for assets
 - Tailwind CSS via `tailwindcss-rails`
-- RSpec + FactoryBot + Faker for tests
+- Minitest + fixtures for tests
 - Authentication is session-based and hand-rolled (`has_secure_password`,
   `current_user`) — no Devise. Leave it that way unless asked.
 
@@ -63,19 +63,22 @@ caller in the same change.
 
 ## Testing
 
-- Write specs for behavior you add or change; cover both the happy path and the
-  failure path.
-- Use FactoryBot (`build`/`create`) with Faker for data; keep factories minimal
-  and valid by default.
+- Write Minitest tests under `test/` for behavior you add or change; cover both
+  the happy path and the failure path.
+- Use fixtures (`test/fixtures/*.yml`) for data; keep them minimal and valid by
+  default.
 - Test through the public interface — never reach into private methods, and
   don't test framework configuration.
 - Prefer real objects over mocks in the happy path; reserve stubs for external
   services and hard-to-reach edge cases.
-- Run the suite with `bundle exec rspec` before opening a PR.
+- Run the suite with `bin/rails test` before opening a PR.
 
 ## Git & PRs
 
 - Never commit directly to `main`. Branch, then open a PR.
+- For this exercise the base branch is `dave`, not `main`: cut every branch and
+  worktree from `dave`, and open every PR against it
+  (`gh pr create --base dave`).
 - Keep PRs small and focused on one logical change.
 - Write a description that says what changed and how to verify it (the manual
   steps a reviewer should take). Self-review the diff before requesting review.
