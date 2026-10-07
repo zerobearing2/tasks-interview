@@ -52,6 +52,17 @@ Rails server process and a local Tailwind process. To start them, run:
 bin/dev
 ```
 
+### Due Date Reminders
+
+`bin/rails reminders:send` emails the assignee of each incomplete task that is
+due tomorrow. It sends one reminder per task and due date, so it is safe to
+rerun. Schedule it hourly so that a task created late in the day still gets its
+reminder.
+
+In production, set `APP_HOST` to the host that the links in the email point to.
+In development, mail is written to `tmp/mails` instead of being sent, and you
+can preview it at `/rails/mailers`.
+
 ## Claude Code
 
 This repo includes custom [Claude Code](https://claude.com/claude-code) tooling
