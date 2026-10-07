@@ -1,6 +1,7 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+require "minitest/mock"
 
 class ActiveSupport::TestCase
   # Run tests in parallel with specified workers
@@ -8,6 +9,10 @@ class ActiveSupport::TestCase
 
   # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
   fixtures :all
+end
 
-  # Add more helper methods to be used by all tests here...
+class ActionDispatch::IntegrationTest
+  def log_in_as(user, password: "abc123")
+    post session_path, params: {session: {email: user.email, password:}}
+  end
 end
