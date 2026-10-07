@@ -213,6 +213,71 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Current one expires in under six months.", task.description
   end
 
+  test "index shows a task's due date and leaves it blank when there is none" do
+    log_in_as users(:ada)
+    tasks(:renew_passport).update!(due_on: Date.new(2026, 5, 3))
+
+    get tasks_path
+
+    assert_select "div", text: "May 03, 2026", count: 1
+    assert_select "div", text: /\A\w+ \d{2}, \d{4}\z/, count: 1
+  end
+
+  test "the form offers a due date field" do
+    log_in_as users(:ada)
+    tasks(:renew_passport).update!(due_on: Date.new(2026, 5, 3))
+
+    get edit_task_path(tasks(:renew_passport))
+
+    assert_select "label[for='task_due_on']", text: "Due on"
+    assert_select "input[type=date][name='task[due_on]'][value='2026-05-03']"
+  end
+
+  test "create saves the due date" do
+    log_in_as users(:ada)
+
+    post tasks_path, params: {task: {title: "Book hotel in Kyoto", due_on: "2026-05-03"}}
+
+    assert_redirected_to tasks_path
+    assert_equal Date.new(2026, 5, 3), Task.find_by!(title: "Book hotel in Kyoto").due_on
+  end
+
+  test "create with a blank due date saves the task without one" do
+    log_in_as users(:ada)
+
+    post tasks_path, params: {task: {title: "Book hotel in Kyoto", due_on: ""}}
+
+    assert_redirected_to tasks_path
+    assert_nil Task.find_by!(title: "Book hotel in Kyoto").due_on
+  end
+
+  test "create ignores reminded_for" do
+    log_in_as users(:ada)
+
+    post tasks_path, params: {task: {title: "Book hotel in Kyoto", reminded_for: "2026-05-03"}}
+
+    assert_nil Task.find_by!(title: "Book hotel in Kyoto").reminded_for
+  end
+
+  test "update saves the due date" do
+    log_in_as users(:ada)
+
+    patch task_path(tasks(:renew_passport)), params: {task: {due_on: "2026-05-03"}}
+
+    assert_redirected_to tasks_path
+    assert_equal Date.new(2026, 5, 3), tasks(:renew_passport).reload.due_on
+  end
+
+  test "update with a blank due date clears it" do
+    log_in_as users(:ada)
+    tasks(:renew_passport).update!(due_on: Date.new(2026, 5, 3))
+
+    patch task_path(tasks(:renew_passport)), params: {task: {due_on: ""}}
+
+    assert_redirected_to tasks_path
+    assert_nil tasks(:renew_passport).reload.due_on
+  end
+
   test "destroy deletes the task and redirects to the index" do
     log_in_as users(:ada)
 

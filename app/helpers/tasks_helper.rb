@@ -7,6 +7,10 @@ module TasksHelper
     task.assignee ? task.assignee.name : "Unassigned"
   end
 
+  def due_date(task)
+    l(task.due_on, format: :long) if task.due_on
+  end
+
   def complete_toggle_button(task)
     button_to(
       task.complete? ? "Mark incomplete" : "Mark complete",
