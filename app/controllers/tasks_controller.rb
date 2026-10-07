@@ -43,10 +43,10 @@ class TasksController < ApplicationController
   private
 
   def set_tasks
-    @tasks = Task.order(:id)
+    @tasks = Task.includes(:assignee).order(:id)
   end
 
   def task_params
-    params.require(:task).permit(:title, :description, :complete)
+    params.require(:task).permit(:title, :description, :complete, :assignee_id)
   end
 end

@@ -5,6 +5,7 @@
     <div class="flex gap-x-8">
       <h2 class="text-lg font-semibold shrink-0"><%= task.title %></h2>
       <div><%= task.complete? ? "Complete" : "Incomplete" %></div>
+      <div><%= assignee_name(task) %></div>
       <div class="italic"><%= task.description&.truncate(50) %></div>
       <div class="flex gap-x-2">
         <%= complete_toggle_button(task) %>
