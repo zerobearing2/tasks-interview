@@ -47,6 +47,28 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_not task.reload.complete?
   end
 
+  test "a toggled task keeps its place in the index" do
+    log_in_as users(:ada)
+    first, second = Task.order(:id).to_a
+
+    patch task_path(first), params: {task: {complete: !first.complete?}}
+    follow_redirect!
+
+    assert_equal [first.title, second.title], css_select("h2").map(&:text)
+  end
+
+  test "toggling a task that has no title shows the title error" do
+    log_in_as users(:ada)
+    task = Task.new(title: nil, complete: false)
+    task.save!(validate: false)
+
+    patch task_path(task), params: {task: {complete: "true"}}
+
+    assert_response :unprocessable_content
+    assert_select "li", text: "Title can't be blank"
+    assert_not task.reload.complete?
+  end
+
   test "create saves the task and redirects to the index" do
     log_in_as users(:ada)
 
@@ -65,7 +87,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
       post tasks_path, params: {task: {title: "", description: "Ryokan near Gion"}}
     end
 
-    assert_response :unprocessable_entity
+    assert_response :unprocessable_content
     assert_select "li", text: "Title can't be blank"
     assert_select "textarea", text: "Ryokan near Gion"
     assert_select "h2", text: tasks(:book_flights).title
@@ -88,7 +110,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
     patch task_path(task), params: {task: {title: "", description: "Changed"}}
 
-    assert_response :unprocessable_entity
+    assert_response :unprocessable_content
     assert_select "li", text: "Title can't be blank"
     assert_select "form[action=?]", task_path(task)
     task.reload

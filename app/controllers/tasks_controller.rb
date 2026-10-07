@@ -1,8 +1,9 @@
 class TasksController < ApplicationController
   before_action :authenticate_user
+  before_action :set_tasks, only: [:index, :create]
 
   def index
-    @tasks = Task.all
+    @task = Task.new
   end
 
   def edit
@@ -15,8 +16,7 @@ class TasksController < ApplicationController
     if @task.save
       redirect_to tasks_path
     else
-      @tasks = Task.all
-      render :index, status: :unprocessable_entity
+      render :index, status: :unprocessable_content
     end
   end
 
@@ -26,7 +26,7 @@ class TasksController < ApplicationController
     if @task.update(task_params)
       redirect_to tasks_path
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 
@@ -41,6 +41,10 @@ class TasksController < ApplicationController
   end
 
   private
+
+  def set_tasks
+    @tasks = Task.order(:id)
+  end
 
   def task_params
     params.require(:task).permit(:title, :description, :complete)
