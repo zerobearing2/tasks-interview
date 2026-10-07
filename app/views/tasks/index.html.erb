@@ -1,5 +1,17 @@
 <h1 class="text-2xl font-bold mb-4">Tasks</h1>
 
+<%- if @due_soon_tasks.present? %>
+  <section id="due_soon" class="mb-8">
+    <h2 class="text-xl font-bold mb-4">Due Soon</h2>
+
+    <div class="flex flex-col gap-y-8">
+      <%= render @due_soon_tasks %>
+    </div>
+  </section>
+
+  <hr class="my-8" />
+<%- end %>
+
 <div class="flex flex-col gap-y-8">
   <%= render @tasks %>
 </div>

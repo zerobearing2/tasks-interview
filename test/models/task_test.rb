@@ -37,4 +37,23 @@ class TaskTest < ActiveSupport::TestCase
   test "invalid when the assignee id is zero" do
     assert_not Task.new(title: "Book hotel in Kyoto", assignee_id: 0).valid?
   end
+
+  test "due_soon covers incomplete tasks due from today through seven days out" do
+    travel_to Time.utc(2026, 5, 3, 12) do
+      overdue = Task.create!(title: "Overdue", due_on: Date.new(2026, 5, 2))
+      today = Task.create!(title: "Due today", due_on: Date.new(2026, 5, 3))
+      seventh_day = Task.create!(title: "Due in 7 days", due_on: Date.new(2026, 5, 10))
+      eighth_day = Task.create!(title: "Due in 8 days", due_on: Date.new(2026, 5, 11))
+      completed = Task.create!(title: "Completed", due_on: Date.new(2026, 5, 4), complete: true)
+
+      due_soon = Task.due_soon
+
+      assert_includes due_soon, today
+      assert_includes due_soon, seventh_day
+      assert_not_includes due_soon, overdue
+      assert_not_includes due_soon, eighth_day
+      assert_not_includes due_soon, completed
+      assert_not_includes due_soon, tasks(:renew_passport)
+    end
+  end
 end

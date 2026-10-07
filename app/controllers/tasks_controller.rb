@@ -44,6 +44,7 @@ class TasksController < ApplicationController
 
   def set_tasks
     @tasks = Task.includes(:assignee).order(:id)
+    @due_soon_tasks = Task.due_soon.where(assignee: current_user).includes(:assignee).order(:due_on, :id)
   end
 
   def task_params
