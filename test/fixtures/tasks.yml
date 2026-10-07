@@ -2,6 +2,7 @@ book_flights:
   title: Book flights to Lisbon
   description: Outbound May 3, return May 17.
   complete: true
+  assignee: grace
 
 renew_passport:
   title: Renew passport
